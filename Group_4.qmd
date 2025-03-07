@@ -1,1 +1,29 @@
+---
+title: "Professional Skills"
+author: "Group 4"
+format: 
+  revealjs: 
+    embed-resources: true
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+# Exploratory analysis
+```{r}
+library(ggplot2)
+library(GGally)
+library(dplyr)
+library(corrplot)
+library(tidyr)
+df <- read.csv("C:\\Users\\ASUS\\Desktop\\project4-mercury.csv")
+summary(df)
+colSums(is.na(df))
+df$Age[is.na(df$Age)] <- median(df$Age, na.rm = TRUE)
+head(df)
 
+df$Group <- as.factor(df$Group)
+
+ggpairs(df, aes(color = Group), upper = list(continuous = wrap("cor", size = 3)))
+
+
+```
