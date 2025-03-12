@@ -1,0 +1,145 @@
+R 
+
+library(ggplot2) # For interaction plot
+
+part 1 
+data <- project4_mercury
+
+#omitting any missing data 
+data <- na.omit(data[, c("ReacTim", "UriMerc", "Group", "Age","Mercury")])
+
+# Calculate mean and standard deviation of UriMerc for each group
+summary_stats <- data %>%
+  group_by(Group) %>%
+  summarise(
+    Mean_UriMerc = mean(UriMerc, na.rm = TRUE),
+    SD_UriMerc = sd(UriMerc, na.rm = TRUE)
+  )
+print(summary_stats)
+
+# Scatterplot of log10 urine mercury concentration (UriMerc) against participant group
+ggplot(data, aes(x = factor(Group), y = UriMerc)) +
+  geom_point(position = position_jitter(width = 0.2), alpha = 0.5) +
+  labs(x = "Group (1 = Dentists, 2 = Controls)", y = "Log10 Mercury Concentration (UriMerc)") +
+  ggtitle("Scatterplot of UriMerc by Group") 
+
+
+
+# Boxplot of UriMerc by participant group
+ggplot(data, aes(x = factor(Group), y = UriMerc)) +
+  geom_boxplot() +
+  labs(x = "Group (1 = Dentists, 2 = Controls)", y = "Log10 Mercury Concentration (UriMerc)") +
+  ggtitle("Boxplot of UriMerc by Group")
+
+
+#fitting first regression to test for first question 
+model <- lm(UriMerc ~ Group, data = data)
+
+
+#statistical summaries of the linear model 
+summary(model)
+
+
+#checking assumptions
+plot(model)
+hist(residuals(model), main = "Histogram of Model Residuals",xlab = "Residuals")
+
+
+
+code for question 2 
+#scatter plot of reactim against UriMerc seperated out by group
+ggplot(data, aes(x = UriMerc, y = ReacTim, color = factor(Group))) +
+  geom_point(alpha = 0.6) +
+  labs(x = "Log10 Mercury Concentration (UriMerc)", y = "Memory Scanning Reaction Time (ReacTim)") +
+  ggtitle("Scatterplot of ReacTim vs UriMerc") +
+  scale_color_manual(values = c("1" = "red", "2" = "blue"), labels = c("1" = "Dentists", "2" = "Controls")) +
+  theme_minimal()
+
+
+# Correlation coefficient between UriMerc and ReacTim, computed separately for each group
+correlation_stats <- data %>%
+  group_by(Group) %>%
+  summarise(
+    Correlation = cor(UriMerc, ReacTim, use = "complete.obs")
+  )
+print(correlation_stats)
+
+# Scatterplot of ReacTim against age
+ggplot(data, aes(x = Age, y = ReacTim)) +
+  geom_point(alpha = 0.6) +
+  labs(x = "Age (years)", y = "Memory Scanning Reaction Time (ReacTim)") +
+  ggtitle("Scatterplot of ReacTim vs Age")
+
+
+# Boxplot of ReacTim by group
+ggplot(data, aes(x = factor(Group), y = ReacTim)) +
+  geom_boxplot() +
+  labs(x = "Group (1 = Dentists, 2 = Controls)", y = "Memory Scanning Reaction Time (ReacTim)") +
+  ggtitle("Boxplot of ReacTim by Group") 
+
+# model without interaction
+model1 <- lm(ReacTim ~ UriMerc + Group, data = data)
+summary(model1)
+
+#model with interation
+model2 <- lm(ReacTim ~ UriMerc * Group, data = data)
+summary(model2)
+
+
+
+#plot of the difference in UriMerc by reaction time, sorted by group
+ggplot(data, aes(x = UriMerc, y = ReacTim, color = factor(Group))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Interaction Plot: UriMerc vs ReacTim by Group",
+       color = "Group",
+       x = "Log10 Urine Mercury (UriMerc)",
+       y = "Reaction Time (ms)") +
+  scale_color_manual(labels = c("Control", "Dentist"), values = c("blue", "red"))
+
+
+  
+
+part 3 
+# basic model
+model4 <- lm(ReacTim ~ UriMerc + Group, data = data)
+#basic model with interaction
+model5 <- lm(ReacTim ~ UriMerc * Group, data = data)
+# basic model with age added 
+model6 <- lm(ReacTim ~ UriMerc + Group + Age, data = data)
+# full model with age and interaction terms 
+model_full <- lm(ReacTim ~ UriMerc * Group + Age, data = data)
+
+
+#output of the model comparison
+cat("\nModel Comparison:\n")
+print(model_compare)
+
+
+
+# Function to check assumptions for each model 
+check_assumptions <- function(model) {
+  par(mfrow = c(2, 2))
+  plot(model)
+  par(mfrow = c(1, 1))
+}
+
+# Check diagnostics for all models
+check_assumptions(model1)
+check_assumptions(model2)
+check_assumptions(model3)
+check_assumptions(full_model)
+
+# model comparisons with R^2 and AIC for each respective model ( select the model with the lowest AIC that's considered the best fitting model)
+model_compare <- data.frame(
+  Model = c("Model 4", "Model 5", "Model 6", "Full Model"),
+  R_sq = c(summary(model1)$r.squared,
+           summary(model2)$r.squared,
+           summary(model3)$r.squared,
+           summary(model_full)$r.squared),
+  AIC = c(AIC(model1),
+          AIC(model2),
+          AIC(model3),
+          AIC(model_full))
+)
+
