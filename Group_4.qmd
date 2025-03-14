@@ -8,7 +8,19 @@ editor: visual
 editor_options: 
   chunk_output_type: console
 ---
+
+# Introduction
+
+The effects of mercury exposure are a concern for many people, more so for dentists as mercury is contained in amalgam fillings which is a very common dental procedure. Dentists now tend to use mercury-free fillings as it is presented as a safer alternative.
+
+To investigate the effects of occupational mercury exposure on dentists data was collected, where mercury exposure was measured by mercury concentration in urine. Data was collected from two groups, the first group being a random sample of 67 Scottish dentists and the second group, the control group, which consisted of 92 subjects from the University of Glasgow who were either staff or postgraduate students, who were not routinely exposed to mercury. Mercury concentrations in urine were measured alongside memory scanning times the review cognitive/neurological of mercury exposure, and the age of the participants was also collected.
+
+The primary objective of this report is to investigate if there is a difference in mercury in urine concentrations between the dentist group and the control group. The secondary objectives are to see if mercury concentration in urine has an impact on memory scanning time. In addition, we will explore the relationship between mercury concentration in urine and memory scanning times between the dentist group and control group. Finally, we will consider whether age influences these potential relationships.
+
+Investigating these factors will increase our understanding on the impact of occupational mercury exposure, particularly if dentists have higher mercury concentrations, how mercury exposure effects cognitive/neurological function and how age contributes to these effects.
+
 # Exploratory analysis
+
 ```{r}
 library(ggplot2)
 library(GGally)
