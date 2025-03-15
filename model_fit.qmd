@@ -1,0 +1,234 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+execute: 
+  echo: false
+  eval: true
+---
+
+# Models to be fitted {#sec-mt}
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+library(ggplot2)
+library(tidyverse)
+library(tidymodels)
+library(plotly)
+library(gt)
+library(MASS)
+library(patchwork)
+library(moderndive)
+library(dplyr)
+library(tidyr)
+library(sjPlot)
+library(performance)
+library(kableExtra)
+df <- read.csv("C:\\Users\\ASUS\\Desktop\\project4-mercury.csv")
+df$Group <- as.factor(df$Group)
+```
+
+## Primary objective:
+
+### (a)
+
+```{r}
+t_test <- t.test(UriMerc~Group, data = df)
+p_value <- t_test$p.value
+cat("P_value:",p_value,"\n")
+```
+
+We performed a t-test comparing the mean log(base 10)-transformed urinary mercury concentration (UriMerc) between the groups and got a p-value of 1.667636e-20. Since this is much less than 0.05, we reject the null hypothesis and conclude that the groups have significantly different mean mercury levels.
+
+## Secondary objective:
+
+### (b)
+We start by fitting a simple linear regression model:
+$$
+y_i = \alpha + \beta_1 x_{1i}+\epsilon_i
+\\=\alpha+\beta_{UriMerc}\cdot UriMerc
+$$
+```{r}
+model1 <- linear_reg() |>
+  fit(data=df, ReacTim~UriMerc)
+```
+```{r}
+#| echo: false
+#| label: tbl-m1
+#| tbl-cap: Estimates of the regression model1 coefficients.
+tidy(model1) |> gt()
+```
+As the table show the intercept is about 849.75, meaning that when UriMerc is 0, the predicted outcome is 849.75. The coefficient for UriMerc is 14.23, indicating that for each one-unit increase in UriMerc, the outcome is expected to increase by 14.23 units. However, this effect is not statistically significant (p = 0.569), suggesting that UriMerc does not have a clear impact on the outcome in this model.
+
+### (c)
+
+We fit the full multiple regression model containing all explanatory variables and separate regression lines for each group. The full model can be written as: 
+$$
+y_i = \alpha + \beta_1 x_{1i} +\beta_2 x_{2i} +\beta_3 x_{1i} x_{2i} +\epsilon_i
+\\=\alpha+\beta_{UriMerc}\cdot UriMerc+\beta_{Group}\cdot \mathbb{I}_{\mathrm{Group}}(x)+\beta_{UriMerc,Group}\cdot UriMerc\cdot \mathbb{I}_{\mathrm{Group}}(x)
+$$ where
+
+\- $\alpha$: Baseline intercept (predicted outcome for Group 1 when $UriMerc$=0).
+
+\- $\beta_{UriMerc}$: Effect of $UriMerc$ on the outcome in Group 1.
+
+\- $\beta_{Group}$: Change in intercept for Group 2 compared to Group 1.
+
+\- $\beta_{UriMerc,Group}$: Change in the effect (slope) of $UriMerc$ for Group 2 compared to Group 1.
+
+\- $\mathbb{I}_{\mathrm{Group}}(x)$: Indicator variable that equals 1 for Group 2 and 0 for Group 1.
+
+```{r}
+model_2 <- linear_reg() |>
+  fit(ReacTim~UriMerc*Group, data=df)
+model2_ext <- linear_reg() |>
+  fit(ReacTim~UriMerc*Group, data=df) |>
+  extract_fit_engine()
+model_2$fit
+```
+
+```{r}
+#| echo: false
+#| label: tbl-regtable
+#| tbl-cap: Estimates of the regression model coefficients.
+get_regression_table(model2_ext) |>
+  knitr::kable(
+    digits = 3,
+    caption = "Full Regression model with interaction term",
+    booktabs = TRUE
+  )
+```
+
+From the coefficient table, the intercept (912.851) represents the predicted reaction time for Group 1 when UriMerc=0. The coefficient for UriMerc (-92.985) implies that each 1-unit increase in UriMerc would lower reaction time by about 93 ms in Group 1, although this effect is not statistically significant (p=0.129). Meanwhile, the coefficient for Group 2 (-103.424) indicates that, at UriMerc=0, reaction time is approximately 103 ms lower than in Group 1 (p=0.006). Finally, the interaction term (73.382) suggests that the slope of UriMerc for Group 2 is 73 ms higher than for Group 1, but this difference is not statistically significant (p=0.304).
+
+And from table we obtain our best-fitting line to the data is: 
+$$
+\widehat{ReacTim}=912.851-92.985	\cdot UriMerc-103.424\cdot \mathbb{I}_{\mbox{Group}}(x)+73.382\cdot UriMerc\cdot \mathbb{I}_{\mbox{Group}}(x)
+$$\
+@fig-scat1 shows how the relationship between urinary mercury concentration (UriMerc) and reaction time (ReacTim) differs by group. Each group has its own regression line, indicating that the effect of UriMerc on ReacTim varies depending on group membership.
+
+```{r}
+#| echo: false
+#| label: fig-scat1
+#| message: false
+#| fig-cap: Relationship between reaction time and UriMerc by groups with regression lines superimposed
+#| fig-width: 4
+#| fig-height: 3
+#| fig-align: center
+ggplot(df,aes(x=UriMerc,y=ReacTim,color=Group))+
+  geom_point()+
+  labs(x="UriMerc",y="Reaction time",color="Groups")+
+  geom_smooth(method = "lm", se=FALSE)
+```
+
+```{r}
+regression.points <- get_regression_points(model2_ext)
+```
+
+@fig-resids plots the residuals against both UriMerc and the fitted values, grouped by the two categories. The points appear evenly scattered around zero, suggesting that the residuals have a mean of zero and no obvious pattern that would indicate non-constant variance or a missing variable. The variance of the residuals looks relatively consistent across all levels of UriMerc and the fitted values, indicating homoscedasticity.
+
+```{r}
+#| echo: false
+#| fig-cap: Residual versus UriMerc (left) and the fitted values (right) by species.
+#| label: fig-resids
+#| fig-width: 4
+#| fig-height: 3
+#| fig-align: center
+
+p1 <- ggplot(regression.points,aes(x=UriMerc,y=residual))+
+  geom_point()+
+  labs(x="UriMerc",y="Residual")+
+  geom_hline(yintercept = 0,col="blue",linewidth=1)+
+  facet_wrap(~Group)
+p2 <- ggplot(regression.points,aes(x=ReacTim_hat,y=residual))+
+  geom_point()+
+  labs(x="Fitted values",y="Residual")+
+  geom_hline(yintercept = 0,col="blue",linewidth=1)+
+  facet_wrap(~Group)
+p1+p2+plot_layout(ncol=2)
+```
+
+@fig-residhist shows histograms of the residuals for each group. Both distributions appear roughly bell-shaped and centered around zero, suggesting the residuals are normally distributed with a mean of zero. This supports the assumption of normality.However, deviations at the tails indicate potential outliers or heavier tails, suggesting a slightly non-normal distribution in extreme values.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| label: fig-residhist
+#| fig-cap: Histograms of the residuals by species.
+#| fig-width: 4
+#| fig-height: 3
+#| fig-align: center
+hist_plot <- ggplot(regression.points,aes(x=residual))+
+  geom_histogram(color="white")+
+  labs(x="Residual")+
+  facet_wrap(~Group)
+qq_plot <- ggplot(regression.points,aes(sample=residual))+
+  stat_qq()+
+  stat_qq_line(color="red")+
+  facet_wrap(~Group)+
+  labs(title = "Q-Q Plot",x="Residual",y="Count")
+hist_plot+qq_plot+plot_layout(ncol = 2)
+```
+
+### (d)
+
+We need to add one covariates age to the full model: $$
+y_i = \alpha + \beta_1 x_{1i} +\beta_2 x_{2i} +\beta_3 x_{1i} x_{2i} +\beta_4x_{3i}+\epsilon_i
+\\=\alpha+\beta_{UriMerc}\cdot UriMerc+\beta_{Group}\cdot \mathbb{I}_{\mathrm{Group}}(x)+\beta_{UriMerc,Group}\cdot UriMerc\cdot \mathbb{I}_{\mathrm{Group}}(x)+\beta_{age}\cdot Age
+$$
+
+```{r}
+model_3 <- linear_reg() |>
+  fit(ReacTim~UriMerc*Group+Age,data=df)
+model_3$fit
+model3_ext <- linear_reg() |>
+  fit(ReacTim~UriMerc*Group+Age,data=df) |>
+  extract_fit_engine()
+regression.points2 <- get_regression_points(model3_ext)
+```
+
+```{r}
+#| echo: false
+#| label: tbl-age
+#| tbl-cap: Estimates of the regression model coefficients.
+get_regression_table(model3_ext) |>
+  knitr::kable(
+    digits = 3,
+    caption = "Regression model with interaction term",
+    booktabs = TRUE
+  )
+```
+As the @tbl-age shows, the coefficient for age is 4.973, meaning that for each additional year of age, the reaction time increases by about 5 milliseconds, holding all other variables constant. This effect is statistically significant (p<0.001), with a 95% confidence interval ranging from approximately 2.3 to 7.7 milliseconds.
+
+```{r}
+#| echo: false
+#| label: tbl-MC
+#| tbl-cap: Model Comparison
+model1_com <- linear_reg() |>
+  fit(data=df,ReacTim~UriMerc*Group) |>
+  extract_fit_engine() |>
+  glance()
+model3_com <- linear_reg() |>
+  fit(data=df,ReacTim~UriMerc*Group+Age) |>
+  extract_fit_engine() |>
+  glance()
+
+Models <- c("Model1","Model3")
+df_test <- bind_rows(model1_com, model3_com, .id = "Model") |>
+  as.data.frame() |>  
+  mutate(Model = as.character(Model))  
+
+colnames(df_test) <- trimws(colnames(df_test)) 
+
+df_test_selected <- df_test |> dplyr::select(Model, adj.r.squared, AIC, BIC)
+
+df_test_selected |> kable(
+  digits = 2,
+  caption = "Model Comparison Values for different models."
+)
+```
+
+As the @tbl-MC shows, Model 2, which includes age, shows a higher adjusted R-square (0.11 compared to 0.03) and lower AIC (2077.44 vs. 2100.98) and BIC (2095.81 vs. 2116.32) values than Model 1. This indicates that the extended model provides a better balance between goodness-of-fit and model complexity, suggesting that adding age improves the model performance and should be preferred.
