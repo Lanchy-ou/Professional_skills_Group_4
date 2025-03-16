@@ -8,7 +8,9 @@ editor: visual
 editor_options: 
   chunk_output_type: console
 ---
+
 # Exploratory analysis
+
 ```{r}
 library(ggplot2)
 library(GGally)
@@ -27,3 +29,17 @@ ggpairs(df, aes(color = Group), upper = list(continuous = wrap("cor", size = 3))
 
 
 ```
+
+# Discussions and Conclusions
+
+## Summary of Findings
+
+## Limitations
+
+While this study gives a great insight into the effect of mercury on dentists, it also has many limitations.
+
+The first limitation of this study is the small sample size. The results are not generalizable to a large population as it only investigates Scottish dentists and staff and students from Glasgow University. This could be counteracted by using a random sample of dentists in the UK or worldwide, and the control group being a random selection of non-dentists.
+
+Another limitation of this study, closely related to the sample size, is the non-randomized study design. The dentists and the controls are not randomly assigned to their groups in this study. This study could benefit from a randomized design to investigate the true relationship between mercury and reaction time without any bias.
+
+Another limitation is the amount of confounding variables such as age, sex, education, and medical conditions. All of these factors could affect reaction time and mercury exposure. Even though all participants have been or are going to university there could be a real difference in intellectual ability and therefore reaction time. Even other medical conditions could affect mercury concentration and reaction time in participants. All of these variables would need to be controlled or kept constant to keep the validity of the study.
