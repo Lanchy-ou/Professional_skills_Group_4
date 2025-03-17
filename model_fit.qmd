@@ -34,6 +34,12 @@ df$Group <- as.factor(df$Group)
 
 ### (a)
 
+A two-samples t-test was conducted to directly compare the mean log (base 10) Mercury concentration between the two groups Null hypothesis in both cases:
+
+$H_0$:There is no significant difference in the mean UriMerc between the two groups.($μ_1$=$μ_2$)
+
+$H_1$:There is a significant difference in the mean UriMerc between the two groups. ($μ_1$$\neq$$μ_2$)
+
 ```{r}
 t_test <- t.test(UriMerc~Group, data = df)
 p_value <- t_test$p.value
@@ -45,27 +51,29 @@ We performed a t-test comparing the mean log(base 10)-transformed urinary mercur
 ## Secondary objective:
 
 ### (b)
-We start by fitting a simple linear regression model:
-$$
+
+We start by fitting a simple linear regression model: $$
 y_i = \alpha + \beta_1 x_{1i}+\epsilon_i
 \\=\alpha+\beta_{UriMerc}\cdot UriMerc
 $$
+
 ```{r}
 model1 <- linear_reg() |>
   fit(data=df, ReacTim~UriMerc)
 ```
+
 ```{r}
 #| echo: false
 #| label: tbl-m1
 #| tbl-cap: Estimates of the regression model1 coefficients.
 tidy(model1) |> gt()
 ```
+
 As the table show the intercept is about 849.75, meaning that when UriMerc is 0, the predicted outcome is 849.75. The coefficient for UriMerc is 14.23, indicating that for each one-unit increase in UriMerc, the outcome is expected to increase by 14.23 units. However, this effect is not statistically significant (p = 0.569), suggesting that UriMerc does not have a clear impact on the outcome in this model.
 
 ### (c)
 
-We fit the full multiple regression model containing all explanatory variables and separate regression lines for each group. The full model can be written as: 
-$$
+We fit the full multiple regression model containing all explanatory variables and separate regression lines for each group. The full model can be written as: $$
 y_i = \alpha + \beta_1 x_{1i} +\beta_2 x_{2i} +\beta_3 x_{1i} x_{2i} +\epsilon_i
 \\=\alpha+\beta_{UriMerc}\cdot UriMerc+\beta_{Group}\cdot \mathbb{I}_{\mathrm{Group}}(x)+\beta_{UriMerc,Group}\cdot UriMerc\cdot \mathbb{I}_{\mathrm{Group}}(x)
 $$ where
@@ -103,9 +111,8 @@ get_regression_table(model2_ext) |>
 
 From the coefficient table, the intercept (912.851) represents the predicted reaction time for Group 1 when UriMerc=0. The coefficient for UriMerc (-92.985) implies that each 1-unit increase in UriMerc would lower reaction time by about 93 ms in Group 1, although this effect is not statistically significant (p=0.129). Meanwhile, the coefficient for Group 2 (-103.424) indicates that, at UriMerc=0, reaction time is approximately 103 ms lower than in Group 1 (p=0.006). Finally, the interaction term (73.382) suggests that the slope of UriMerc for Group 2 is 73 ms higher than for Group 1, but this difference is not statistically significant (p=0.304).
 
-And from table we obtain our best-fitting line to the data is: 
-$$
-\widehat{ReacTim}=912.851-92.985	\cdot UriMerc-103.424\cdot \mathbb{I}_{\mbox{Group}}(x)+73.382\cdot UriMerc\cdot \mathbb{I}_{\mbox{Group}}(x)
+And from table we obtain our best-fitting line to the data is: $$
+\widehat{ReacTim}=912.851-92.985    \cdot UriMerc-103.424\cdot \mathbb{I}_{\mbox{Group}}(x)+73.382\cdot UriMerc\cdot \mathbb{I}_{\mbox{Group}}(x)
 $$\
 @fig-scat1 shows how the relationship between urinary mercury concentration (UriMerc) and reaction time (ReacTim) differs by group. Each group has its own regression line, indicating that the effect of UriMerc on ReacTim varies depending on group membership.
 
@@ -201,7 +208,8 @@ get_regression_table(model3_ext) |>
     booktabs = TRUE
   )
 ```
-As the @tbl-age shows, the coefficient for age is 4.973, meaning that for each additional year of age, the reaction time increases by about 5 milliseconds, holding all other variables constant. This effect is statistically significant (p<0.001), with a 95% confidence interval ranging from approximately 2.3 to 7.7 milliseconds.
+
+As the @tbl-age shows, the coefficient for age is 4.973, meaning that for each additional year of age, the reaction time increases by about 5 milliseconds, holding all other variables constant. This effect is statistically significant (p\<0.001), with a 95% confidence interval ranging from approximately 2.3 to 7.7 milliseconds.
 
 ```{r}
 #| echo: false
