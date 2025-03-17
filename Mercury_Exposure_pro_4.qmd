@@ -1,0 +1,166 @@
+---
+title: "Explanatory Data Analysis: Mercury Exposure in Dentists and Control Group"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+knitr:
+  opts_chunk: 
+    echo: false
+---
+
+```{r}
+#| echo: true
+#| warning: false
+library(tidyverse)
+library(tidymodels)
+library(moderndive)
+library(skimr)
+library(knitr)
+```
+
+# Introduction
+
+This analysis aims to explore the mercury exposure dataset in dentists and its potential effects on memory scanning reaction times. The dataset consists of observations for two groups: dentists (Group 1) and control subjects (Group 2).
+
+We will perform an exploratory data analysis (EDA) to understand the structure of the data and check for any obvious patterns or relationships among the variables.
+
+The data consists of 159 rows and 5 columns, as shown below:
+
+-   `Group`: (1 for dentists, 2 for control).
+
+-   `Age`: Age of the subject.
+
+-   `Mercury`: Mercury concentration in urine (raw value).
+
+-   `UriMerc`: Log base 10 of mercury concentration in urine .
+
+-   `ReacTim`: Memory scanning reaction time (in milliseconds).
+
+## Data Loading and Preprocessing
+
+```{r}
+#| echo: true
+data <- read.csv("C:/Users/Axnou/OneDrive - University of Glasgow/staticstics/stats level 3/Professional Skills/Group Project/project4-mercury.csv")
+head(data)
+```
+
+```{r}
+data$Group <- as.factor(data$Group)
+```
+
+**Age** has an average of 36.2 years, ranging from 22 to 44 years. **Mercury** and **UriMerc** show high variability in mercury levels, with **UriMerc** having some negative log-transformed values. **ReacTim** has a mean of 848 ms with significant variation in reaction times. The dataset has minimal missing data, with only one missing value in **Age**.
+
+## Descriptive Statistics and Summaries
+
+```{r}
+#| echo: true
+
+summary_merc <- data %>%
+  drop_na() %>%
+  group_by(Group) %>%
+  summarise(
+    mean_Urimerc = mean(UriMerc),
+    sd_Urimerc = sd(UriMerc),
+    mean_react = mean(ReacTim),
+    sd_ReacTim = sd(ReacTim),
+    .groups = 'drop'
+  )
+
+
+```
+
+```{r}
+
+#| echo: true
+#| eval: false
+summary_df <- data.frame(
+  Group = c(1, 2),
+  mean_Urimerc = c(0.271, -0.449),
+  sd_Urimerc = c(0.355, 0.495),
+  mean_react = c(888, 817),
+  sd_ReacTim = c(199, 158)
+)
+
+
+kable(summary_df, 
+      col.names = c("Group", "Mean UriMerc", "SD UriMerc", "Mean Reaction Time", "SD Reaction Time"), 
+      caption = "Summary Statistics for Mercury Data by Group")
+
+```
+
+**What evidence is there that log (base10) mercury concentrations in urine is, on average, different for dentists compared with the control group who are not regularly exposed to mercury?**
+
+## Plot the Distribution of Key Variables
+
+### Boxplot of Reaction Time by Group
+
+```{r}
+
+ggplot(data, aes(x = Group, y = ReacTim, fill = Group)) +
+  geom_boxplot() +
+  labs(title = "Boxplot of Reaction Time by Group", 
+       x = "Group", y = "Reaction Time (ms)") +
+  scale_x_discrete(labels = c("1" = "Dentists", "2" = "UofG Postgraduates")) +
+  theme(legend.position = "none")
+
+```
+
+**Interpretation:** Dentists have higher reaction times compared to UofG Postgraduates, with more variability and outliers in the dentists' group. This suggests that mercury exposure might be impacting the cognitive speed of dentists more than postgraduates, or other factors may be influencing their reaction time
+
+### Scatterplot of Reaction Time vs. Mercury Concentration (log-transformed)
+
+```{r}
+#| echo: false 
+#| warning: false
+
+ggplot(data, aes(x = UriMerc, y = ReacTim, color = Group)) +
+  geom_point() + 
+  labs(title = "Scatterplot of Reaction Time vs Mercury Concentration", 
+       x = "Mercury Concentration (UriMerc)", y = "Reaction Time (ms)") +
+  scale_fill_manual(values = c("1" = "red", "2" = "blue"), 
+                    labels = c("1" = "Dentists", "2" = "UofG Postgraduates")) +
+  theme(legend.position = "top")
+
+```
+
+**Interpretation:** There is a very weak positive relationship between mercury concentration and reaction time, indicating that higher mercury levels in urine may have a slight effect on slowing reaction times. However, the weak correlation suggests that other factors may be influencing reaction time more significantly than mercury concentration alone.
+
+### Scatterplot of Age vs. Reaction Time and Mercury
+
+```{r}
+
+data_clean <- data %>%
+  drop_na(Age, ReacTim, UriMerc)
+
+print(paste("Correlation between Reaction Time and Age: ", cor(data$ReacTim, data$UriMerc)))
+
+# Age vs Reaction Time
+ggplot(data_clean, aes(x = Age, y = ReacTim)) +
+  geom_point(aes(color = Group)) +
+  labs(title = "Relationship of Age vs Reaction Time",
+       x = "Age (years)", y = "Reaction Time (ms)") +
+  theme(legend.position = "top") +
+  scale_color_discrete(labels = c("1" = "Dentists", "2" = "UofG Postgraduates"))
+
+
+
+```
+
+**Interpretation:** There’s no clear relationship between age and reaction time, suggesting that age does not significantly affect cognitive speed in either group. This might imply that age-related decline in cognitive function isn’t a major factor in the observed reaction times, or that age ranges in the data are not broad enough to show a noticeable trend.
+
+```{r}
+#  Age vs Mercury Concentration (log-transformed)
+
+print(paste("Correlation between Reaction Time and Age: ", cor(data$ReacTim, data$UriMerc)))
+print(paste("Correlation between Mercury Concentration and Age: ", cor(data$Age, data$UriMerc)))
+cor(data$UriMerc, data$Age, use = "complete.obs")
+ggplot(data_clean, aes(x = Age, y = UriMerc)) +
+  geom_point(aes(color = Group)) +
+  labs(title = "Scatterplot of Age vs Mercury Concentration",
+       x = "Age (years)", y = "Mercury Concentration (UriMerc)") +
+  theme(legend.position = "top") +
+  scale_color_discrete(labels = c("1" = "Dentists", "2" = "UofG Postgraduates"))
+```
+
+**Interpretation:** The weak negative correlation between age and mercury concentration suggests that older individuals tend to have lower mercury levels in their urine. This could imply that mercury exposure decreases with age, possibly due to reduced exposure or natural biological changes. However, the relationship is weak, indicating that other factors might be more influential on mercury concentration than age.
