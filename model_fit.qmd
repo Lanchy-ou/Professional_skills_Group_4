@@ -74,7 +74,7 @@ model1 <- linear_reg() |>
 tidy(model1) |> gt()
 ```
 
-As the table show the intercept is about 849.75, meaning that when UriMerc is 0, the predicted outcome is 849.75. The coefficient for UriMerc is 14.23, indicating that for each one-unit increase in UriMerc, the outcome is expected to increase, on average, by 14.23 units. However, this effect is not statistically significant (p = 0.569), suggesting that UriMerc does not have a clear impact on the outcome in this model.
+As the table show the intercept is about 849.75, meaning that when UriMerc is 0, the predicted outcome is 849.75. The coefficient for UriMerc is 14.23, indicating that for each ten-fold increase in Mercury concentration, the outcome is expected to increase, on average, by 14.23 units, holding all other variables constant. However, this effect is not statistically significant (p = 0.569), suggesting that UriMerc does not have a clear impact on the outcome in this model.
 
 ### (c)
 
@@ -114,7 +114,7 @@ get_regression_table(model2_ext) |>
   )
 ```
 
-From the coefficient table, the intercept (912.851) represents the predicted reaction time for Group 1 when UriMerc=0. The coefficient for UriMerc (-92.985) implies that each 1-unit increase in UriMerc would lower reaction time, on average, by 93 ms in Group 1(dentist group), although this effect is not statistically significant (p=0.130). Meanwhile, the coefficient for Group 2 (-102.982) indicates that, at UriMerc=0, reaction time is approximately 103 ms lower than in Group 1, which is statistically significant (p=0.006). Finally, the interaction term (76.076) suggests that the slope of UriMerc for Group 2 is 73 ms higher than for Group 1, but this difference is not statistically significant (p=0.290).
+From the coefficient table, the intercept (912.851) represents the predicted reaction time for Group 1 when UriMerc=0. The coefficient for UriMerc (-92.985) implies that each ten-fold increase in Mercury concentration would lower reaction time, on average, by 93 ms in Group 1(dentist group), holding all other variables constant, although this effect is not statistically significant (p=0.130). Meanwhile, the coefficient for Group 2 (-102.982) indicates that, at UriMerc=0, reaction time is approximately 103 ms lower than in Group 1, which is statistically significant (p=0.006). Finally, the interaction term (76.076) suggests that the slope of UriMerc for Group 2 is 73 ms higher than for Group 1, but this difference is not statistically significant (p=0.290).
 
 And from table we obtain our best-fitting line to the data is: $$
 \widehat{ReacTim}=912.851-92.985    \cdot UriMerc-103.424\cdot \mathbb{I}_{\mbox{Group}}(x)+73.382\cdot UriMerc\cdot \mathbb{I}_{\mbox{Group}}(x)
