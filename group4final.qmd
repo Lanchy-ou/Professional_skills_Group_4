@@ -1,6 +1,14 @@
 ---
 title: "group4- ps"
-format: pdf
+format:
+  pdf:
+    documentclass: article
+    fontsize: 11pt
+    geometry: a4paper, margin=0.75in
+execute: 
+  echo: false
+  eval: true
+  warning: false
 editor: visual
 ---
 
@@ -554,7 +562,6 @@ qq_plot2 <- ggplot(regression.points3,aes(sample=residual))+
   labs(title = "Q-Q Plot",x = "Theoretical Quantiles", y = "Residuals")
 p_residual+qq_plot2+plot_layout(ncol = 2)
 ```
-
 
 # Discussions and Conclusions
 
