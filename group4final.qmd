@@ -1,0 +1,601 @@
+---
+title: "group4- ps"
+format:
+  pdf:
+    documentclass: article
+    fontsize: 11pt
+    geometry: a4paper, margin=0.75in
+execute: 
+  echo: false
+  eval: true
+  warning: false
+editor: visual
+---
+
+## Introduction
+
+The effects of mercury exposure are a concern for many people, more so for dentists as mercury is contained in amalgam fillings which is a very common dental procedure. Dentists now tend to use mercury-free fillings as it is presented as a safer alternative.
+
+To investigate the effects of occupational mercury exposure on dentists, data was collected, where mercury exposure was measured by mercury concentration in urine. Data was collected from two groups, the first group being a random sample of 67 Scottish dentists and the second group, the control group, which consisted of 92 subjects from the University of Glasgow who were either staff or postgraduate students, who were not routinely exposed to mercury. Mercury concentrations in urine were measured alongside memory scanning times the review cognitive/neurological of mercury exposure, and the age of the participants was also collected.
+
+The primary objective of this report is to investigate if there is a difference in mercury in urine concentrations between the dentist group and the control group. The secondary objectives are to see if mercury concentration in urine has an impact on memory scanning time. In addition, we will explore the relationship between mercury concentration in urine and memory scanning times between the dentist group and control group. Finally, we will consider whether age influences these potential relationships.
+
+Investigating these factors will increase our understanding on the impact of occupational mercury exposure, particularly if dentists have higher mercury concentrations, how mercury exposure effects cognitive/neurological function and how age contributes to these effects.
+
+```{r}
+#| echo: false
+#| warning: false
+
+library(tidyverse)
+library(tidymodels)
+library(moderndive)
+library(skimr)
+library(knitr)
+```
+
+# Introduction
+
+This analysis aims to explore the mercury exposure dataset in dentists and its potential effects on memory scanning reaction times. The dataset consists of observations for two groups: dentists (Group 1) and control subjects (Group 2).
+
+We will perform an exploratory data analysis (EDA) to understand the structure of the data and check for any obvious patterns or relationships among the variables.
+
+The data consists of 159 rows and 5 columns, as shown below:
+
+-   `Group`: (1 for dentists, 2 for control).
+
+-   `Age`: Age of the subject.
+
+-   `Mercury`: Mercury concentration in urine (raw value).
+
+-   `UriMerc`: Log base 10 of mercury concentration in urine .
+
+-   `ReacTim`: Memory scanning reaction time (in milliseconds).
+
+## Data Loading and Preprocessing
+
+```{r}
+
+#| echo: false
+
+data <- read.csv("/Users/changhaoyan/Downloads/project4-mercury.csv")
+
+```
+
+```{r}
+data$Group <- as.factor(data$Group)
+```
+
+**Age** has an average of 36.2 years, ranging from 22 to 44 years. **Mercury** and **UriMerc** show high variability in mercury levels, with **UriMerc** having some negative log-transformed values. **ReacTim** has a mean of 848 ms with significant variation in reaction times. The dataset has minimal missing data, with only one missing value in **Age**.
+
+## Descriptive Statistics and Summaries
+
+```{r}
+#| echo: false
+
+summary_merc <- data %>%
+  drop_na() %>%
+  group_by(Group) %>%
+  summarise(
+    mean_Urimerc = mean(UriMerc),
+    sd_Urimerc = sd(UriMerc),
+    mean_react = mean(ReacTim),
+    sd_ReacTim = sd(ReacTim),
+    .groups = 'drop'
+  )
+
+
+```
+
+```{r}
+library(performance)
+
+#| echo: false
+#| eval: false
+summary_df <- data.frame(
+  Group = c(1, 2),
+  mean_Urimerc = c(0.271, -0.449),
+  sd_Urimerc = c(0.355, 0.495),
+  mean_react = c(888, 817),
+  sd_ReacTim = c(199, 158)
+)
+
+
+kable(summary_df, 
+      col.names = c("Group", "Mean UriMerc", "SD UriMerc", "Mean Reaction Time", "SD Reaction Time"), caption = "Summary Statistics for Mercury Data by Group")
+
+```
+
+**What evidence is there that log (base10) mercury concentrations in urine is, on average, different for dentists compared with the control group who are not regularly exposed to mercury?**
+
+## Plot the Distribution of Key Variables
+
+### Boxplot of Reaction Time by Group
+
+```{r}
+#| echo: false
+#| fig.width: 3
+#| fig.height: 2
+ggplot(data, aes(x = Group, y = ReacTim, fill = Group)) +
+  geom_boxplot() +
+  labs(title = "Boxplot of Reaction Time by Group", 
+       x = "Group", y = "Reaction Time (ms)") +
+  scale_x_discrete(labels = c("1" = "Dentists", "2" = "UofG Postgraduates")) +
+  theme(legend.position = "none")
+
+```
+
+**Interpretation:** Dentists have higher reaction times compared to UofG Postgraduates, with more variability and outliers in the dentists' group. This suggests that mercury exposure might be impacting the cognitive speed of dentists more than postgraduates, or other factors may be influencing their reaction time
+
+### Scatterplot of Reaction Time vs. Mercury Concentration (log-transformed)
+
+```{r}
+#| echo: false 
+#| warning: false
+#| fig.width: 3
+#| fig.height: 2
+ggplot(data, aes(x = UriMerc, y = ReacTim, color = Group)) +
+  geom_point() + 
+  labs(title = "Scatterplot of Reaction Time vs Mercury Concentration", 
+       x = "Mercury Concentration (UriMerc)", y = "Reaction Time (ms)") +
+  scale_fill_manual(values = c("1" = "red", "2" = "blue"), 
+                    labels = c("1" = "Dentists", "2" = "UofG Postgraduates")) +
+  theme(legend.position = "top")
+
+```
+
+**Interpretation:** There is a very weak positive relationship between mercury concentration and reaction time, indicating that higher mercury levels in urine may have a slight effect on slowing reaction times. However, the weak correlation suggests that other factors may be influencing reaction time more significantly than mercury concentration alone.
+
+### Scatterplot of Age vs. Reaction Time and Mercury
+
+```{r}
+#| echo: false
+#| fig.width: 3
+#| fig.height: 2
+data_clean <- data %>%
+  drop_na(Age, ReacTim, UriMerc)
+
+
+
+# Age vs Reaction Time
+ggplot(data_clean, aes(x = Age, y = ReacTim)) +
+  geom_point(aes(color = Group)) +
+  labs(title = "Relationship of Age vs Reaction Time",
+       x = "Age (years)", y = "Reaction Time (ms)") +
+  theme(legend.position = "top") +
+  scale_color_discrete(labels = c("1" = "Dentists", "2" = "UofG Postgraduates"))
+
+
+
+```
+
+**Interpretation:** There’s no clear relationship between age and reaction time, suggesting that age does not significantly affect cognitive speed in either group. This might imply that age-related decline in cognitive function isn’t a major factor in the observed reaction times, or that age ranges in the data are not broad enough to show a noticeable trend.
+
+```{r}
+
+
+#  Age vs Mercury Concentration (log-transformed)
+
+#| echo: false
+#| fig.width: 3
+#| fig.height: 2
+print(paste("Correlation between Reaction Time and Age: ", cor(data$ReacTim, data$UriMerc)))
+print(paste("Correlation between Mercury Concentration and Age: ", cor(data$Age, data$UriMerc)))
+cor(data$UriMerc, data$Age, use = "complete.obs")
+ggplot(data_clean, aes(x = Age, y = UriMerc)) +
+  geom_point(aes(color = Group)) +
+  labs(title = "Scatterplot of Age vs Mercury Concentration",
+       x = "Age (years)", y = "Mercury Concentration (UriMerc)") +
+  theme(legend.position = "top") +
+  scale_color_discrete(labels = c("1" = "Dentists", "2" = "UofG Postgraduates"))
+```
+
+**Interpretation:** The weak negative correlation between age and mercury concentration suggests that older individuals tend to have lower mercury levels in their urine. This could imply that mercury exposure decreases with age, possibly due to reduced exposure or natural biological changes. However, the relationship is weak, indicating that other factors might be more influential on mercury concentration than age.
+
+# Models to be fitted {#sec-mt}
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#fig-width: 4
+#fig-height: 3
+#fig-align: center
+library(ggplot2)
+library(tidyverse)
+library(tidymodels)
+library(plotly)
+library(gt)
+library(MASS)
+library(patchwork)
+library(moderndive)
+library(dplyr)
+library(tidyr)
+library(sjPlot)
+library(performance)
+library(kableExtra)
+df <- data
+df <- na.omit(df[, c("ReacTim", "UriMerc", "Group", "Age","Mercury")])
+df$Group <- factor(df$Group, levels = c("1", "2"), labels = c("Dentist", "Control"))
+
+```
+
+## Primary objective:
+
+### (a)
+
+A two-samples t-test was conducted to directly compare the mean log (base 10) Mercury concentration between the two groups Null hypothesis in both cases:
+
+$H_0$:There is no significant difference in the mean UriMerc between the two groups.($μ_1$=$μ_2$)
+
+$H_1$:There is a significant difference in the mean UriMerc between the two groups. ($μ_1$$\neq$$μ_2$)
+
+```{r}
+t_test <- t.test(UriMerc~Group, data = df)
+p_value <- t_test$p.value
+cat("P_value:",p_value,"\n")
+```
+
+We performed a t-test comparing the mean log(base 10)-transformed urinary mercury concentration (UriMerc) between the groups and got a p-value of 1.667636e-20. Since this is much less than the 5% significance level, we reject the null hypothesis and conclude that the groups have significantly different mean mercury levels.
+
+## Secondary objective:
+
+### (b)
+
+We start by fitting a simple linear regression model: $$
+y_i = \alpha + \beta_1 x_{1i}+\epsilon_i
+\\=\alpha+\beta_{UriMerc}\cdot UriMerc +\epsilon_i
+$$
+
+```{r}
+model1 <- linear_reg() |>
+  fit(data=df, ReacTim~UriMerc)
+
+model1_ext <- linear_reg() |>
+  fit(data=df, ReacTim~UriMerc) |>
+  extract_fit_engine()
+
+regression.points_0 <- get_regression_points(model1_ext)
+
+model_B <- lm(data=df,ReacTim~UriMerc)
+model_summary <- tidy(model_B)
+```
+
+```{r}
+#| echo: false
+#| results: asis
+#| label: tbl-m1
+#| tbl-cap: Estimates of the regression model1 coefficients.
+#| tbl-placement: "H"
+
+r_squared <- glance(model_B)$r.squared
+
+# Add R-squared to the table
+model_summary <- model_summary |> 
+  mutate(R_squared = r_squared)
+
+# Display with gt()
+#model_summary |> gt()
+knitr::kable(model_summary, format = "latex", booktabs = TRUE)
+```
+
+@tbl-m1 show the intercept is about 849.75, meaning that when UriMerc is 0, the predicted outcome is 849.75. The coefficient for UriMerc is 15.922, indicating that for a 1% increase in Mercury concentration is associated with a 0.15922 ms increase in reaction time on average, holding all other variables constant. However, this effect is not statistically significant (p = 0.569) to a 5% significance level, suggesting that UriMerc does not have a clear impact on the outcome in this model. The R-square is low with only 0.25% of the variance in reaction time being explained by UriMerc, this means there may be other variables not accounted for that better explain the variance in reaction time, hence the model is not a good fit.
+
+```{r}
+#| echo: false
+#| fig-cap: Residual versus UriMerc (left) and the fitted values (right) 
+#| label: fig-resids_0
+#| fig-pos: "H"
+#| fig.width: 7
+#| fig.height: 3
+p10 <- ggplot(regression.points_0,aes(x=UriMerc,y=residual))+
+  geom_point()+
+  labs(x="UriMerc",y="Residual")+
+  geom_hline(yintercept = 0,col="blue",linewidth=1)
+p20 <- ggplot(regression.points_0,aes(x=ReacTim_hat,y=residual))+
+  geom_point()+
+  labs(x="Fitted values",y="Residual")+
+  geom_hline(yintercept = 0,col="blue",linewidth=1)
+qq_plot0 <- ggplot(regression.points_0,aes(sample=residual))+
+  stat_qq()+
+  stat_qq_line(color="red")+
+  labs(title = "Q-Q Plot",x = "Theoretical Quantiles", y = "Residuals")
+hist_plot0 <- ggplot(regression.points_0,aes(x=residual))+
+  geom_histogram(color="white")+
+  labs(x="Residual")
+p10+p20+qq_plot0+hist_plot0+plot_layout(ncol=4)
+```
+
+we can see from the normal Q-Q plot that most of the points follow the 45 degree line, however we find deviations at the tails indicate potential outliers or heavier tails, suggesting a slightly non-normal distribution in extreme values. Despite this, the residuals in the histogram appear roughly bell-shaped and centered around zero, suggesting the residuals are normally distributed with a mean of zero. This supports the assumption of normality.
+
+In the residual vs fitted plot. The points appear evenly scattered around zero, suggesting that the residuals have a mean of zero and no obvious pattern that would indicate non-constant variance or a missing variable. The variance of the residuals looks relatively consistent across all levels of the fitted values, indicating homoscedasticity.
+
+Hence we can see that the assumptions of normality, homoscedasticity and linearity hold.
+
+### (c)
+
+We fit the full multiple regression model containing all explanatory variables and separate regression lines for each group. The full model can be written as: $$
+y_i =\alpha+\beta_{UriMerc}\cdot UriMerc+\beta_{Group}\cdot \mathbb{I}_{\mathrm{Group}}(x)+\beta_{UriMerc,Group}\cdot UriMerc\cdot \mathbb{I}_{\mathrm{Group}}(x)
+$$ where
+
+\- $\alpha$: Baseline intercept (predicted outcome for Group 1 when $UriMerc$=0).
+
+\- $\beta_{UriMerc}$: Effect of $UriMerc$ on the outcome in Group 1.
+
+\- $\beta_{Group}$: Change in intercept for Group 2 compared to Group 1.
+
+\- $\beta_{UriMerc,Group}$: Change in the effect (slope) of $UriMerc$ for Group 2 compared to Group 1.
+
+\- $\mathbb{I}_{\mathrm{Group}}(x)$: Indicator variable that equals 1 for Group 2 and 0 for Group 1.
+
+```{r}
+model_2 <- linear_reg() |>
+  fit(ReacTim~UriMerc*Group, data=df)
+model2_ext <- linear_reg() |>
+  fit(ReacTim~UriMerc*Group, data=df) |>
+  extract_fit_engine()
+```
+
+```{r}
+#| echo: false
+#| label: tbl-regtable
+#| tbl-cap: Full Regression Model with Interaction Term.
+#| tbl-placement: "H"
+r_squared2 <- glance(model_2)$adj.r.squared
+regression_table <- get_regression_table(model2_ext)
+
+regression_table_full <- rbind(regression_table, 
+                          data.frame(term = "R-squared", estimate = r_squared, std_error = NA, statistic = NA, p_value = NA, lower_ci = NA, upper_ci = NA))
+
+# Display with knitr::kable
+knitr::kable(
+  regression_table_full,
+  digits = 3,
+  booktabs = TRUE
+)
+```
+
+From the @tbl-regtable, the intercept (912.851) represents the predicted reaction time for Group 1 when UriMerc=0. The coefficient for UriMerc (-92.985) implies that 1% increase in urine concentration is associated with a reduction in reaction time, on average, by 0.92985 ms , holding all other variables constant, although this effect is not statistically significant (p=0.130) to a 5% significance level. Meanwhile, the coefficient for Group control (-102.982) indicates that, the average difference in reaction time in dentists is approximately 103 ms lower than in the control group, holding all other variables constant, which is statistically significant (p=0.006) to a 1% significiance level. Finally, the interaction term (76.076) suggests that the slope of UriMerc for dentists is 73 ms higher than for the control group, on average, holding all other variables constant, but this difference is not statistically significant (p=0.290) to a 5% significance level. In terms of model fit, we can see that $R^2 adj$ is 0.3%, which means 99.7% of the variance in reaction time remains unexplained by the model, this indicates poor goodness of fit of the model, which may result from omitted variables not included in the model.
+
+From table we obtain our best-fitting line to the data is: $$
+\widehat{ReacTim}=912.851-92.985    \cdot UriMerc-103.424\cdot \mathbb{I}_{\mbox{Group}}(x)+73.382\cdot UriMerc\cdot \mathbb{I}_{\mbox{Group}}(x)
+$$\
+@fig-scat1 shows how the relationship between urinary mercury concentration (UriMerc) and reaction time (ReacTim) differs by group. Each group has its own regression line, indicating that the effect of UriMerc on ReacTim varies depending on group membership.
+
+```{r}
+#| echo: false
+#| label: fig-scat1
+#| message: false
+#| fig-cap: Relationship between reaction time and UriMerc by groups with regression lines superimposed
+#| fig-pos: "H"
+#| fig.width: 4
+#| fig.height: 3
+ggplot(df,aes(x=UriMerc,y=ReacTim,color=Group))+
+  geom_point()+
+  labs(x="UriMerc",y="Reaction time",color="Groups")+
+  geom_smooth(method = "lm", se=FALSE)
+```
+
+```{r}
+regression.points <- get_regression_points(model2_ext)
+```
+
+@fig-resids plots the residuals against both UriMerc and the fitted values, grouped by the two categories. The points appear evenly scattered around zero, suggesting that the residuals have a mean of zero and no obvious pattern that would indicate non-constant variance or a missing variable. The variance of the residuals looks relatively consistent across all levels of UriMerc and the fitted values, indicating homoscedasticity.
+
+```{r}
+#| echo: false
+#| fig-cap: Residual versus UriMerc (left) and the fitted values (right) by species.
+#| label: fig-resids
+#| fig-pos: "H"
+#| fig.width: 7
+#| fig.height: 3
+p1 <- ggplot(regression.points,aes(x=UriMerc,y=residual))+
+  geom_point()+
+  labs(x="UriMerc",y="Residual")+
+  geom_hline(yintercept = 0,col="blue",linewidth=1)+
+  facet_wrap(~Group)
+p2 <- ggplot(regression.points,aes(x=ReacTim_hat,y=residual))+
+  geom_point()+
+  labs(x="Fitted values",y="Residual")+
+  geom_hline(yintercept = 0,col="blue",linewidth=1)+
+  facet_wrap(~Group)
+p1+p2+plot_layout(ncol=2)
+```
+
+@fig-residhist shows histograms of the residuals for each group. Both distributions appear roughly bell-shaped and centered around zero, suggesting the residuals are normally distributed with a mean of zero. This supports the assumption of normality. We do find deviations at the tail end, indicating a slight right tailed distribution, this is not a cause for concern though, as previously mentions the distributions appear bell-shaped and centred around zero, hence it is reasonable ot assume normality.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| label: fig-residhist
+#| fig-cap: Histograms of the residuals by species.
+#| fig-pos: "H"
+#| fig.width: 7
+#| fig.height: 3
+hist_plot <- ggplot(regression.points,aes(x=residual))+
+  geom_histogram(color="white")+
+  labs(x="Residual")+
+  facet_wrap(~Group)
+qq_plot <- ggplot(regression.points,aes(sample=residual))+
+  stat_qq()+
+  stat_qq_line(color="red")+
+  facet_wrap(~Group)+
+  labs(title = "Q-Q Plot",x = "Theoretical Quantiles", y = "Residuals")
+hist_plot+qq_plot+plot_layout(ncol = 2)
+```
+
+### (d)
+
+We need to add one covariates age to the full model: $$
+y_i =\alpha+\beta_{UriMerc}\cdot UriMerc+\beta_{Group}\cdot \mathbb{I}_{\mathrm{Group}}(x)+\beta_{UriMerc,Group}\cdot UriMerc\cdot \mathbb{I}_{\mathrm{Group}}(x)+\beta_{age}\cdot Age
+$$
+
+```{r}
+model_3 <- linear_reg() |>
+  fit(ReacTim~UriMerc*Group+Age,data=df)
+model3_ext <- linear_reg() |>
+  fit(ReacTim~UriMerc*Group+Age,data=df) |>
+  extract_fit_engine()
+regression.points2 <- get_regression_points(model3_ext)
+```
+
+```{r}
+#| echo: false
+#| label: tbl-age
+#| tbl-cap: Estimates of the regression model coefficients.
+#| tbl-placement: "H"
+get_regression_table(model3_ext) |>
+  knitr::kable(
+    digits = 3,
+    caption = "Regression model with interaction term",
+    booktabs = TRUE
+  )
+```
+
+As the @tbl-age shows, the intercept has a value of 713.731, this suggests that the estimated baseline reaction time when all other predictors are 0 is 713.731 ms. In this context an age of zero is unrealistic, so the intercept mainly serves as a reference point. The coefficient for age is 4.973, meaning that for each additional year of age, the average of reaction time increases by about 5 ms, holding all other variables constant. This effect is statistically significant (p\<0.001) to a 1% significance level, with a 95% confidence interval ranging from approximately 2.3 to 7.7 milliseconds. The coefficient for UriMerc (-81.283) implies that 1% increase in urine concentration is associated with a reduction in reaction time, on average, by 0.81283 ms , holding all other variables constant, although this effect is not statistically significant to a 5% level (p=0.169).The coefficient for Group control (-77.053) indicates that, the average difference in reaction time in dentists is approximately 77 ms lower than in the control group, holding all other variables constant, which is statistically significant (p=0.035) to a 5% significiance level. Finally, the interaction term (52.907) suggests that the slope of UriMerc for dentists is 53 ms higher than for the control group, on average, holding all other variables constant, but this difference is not statistically significant (p=0.446) to a 5% significance level.
+
+To evaluate whether age improves the model we use the following regressions to compare AIC and $R^2$:
+
+Basic model: $$
+ReacTim_i=\alpha+\beta_{urimerc}\cdot UriMerc_i+\epsilon_i, \epsilon_i\sim N(0,\sigma^2)
+$$ Model With Group: $$
+ReacTim_i=\alpha+\beta_{urimerc}\cdot UriMerc_i+\beta_{group}\cdot Group_i+\epsilon_i, \epsilon_i\sim N(0,\sigma^2)
+$$
+
+Model with interaction term: $$ ReacTim_i=\alpha+\beta_{urimerc}\cdot UriMerc_i+\beta_{group}\cdot Group_i+\beta_{urimerc,group}\cdot UriMerc_i\cdot Group_i+\epsilon_i, \epsilon_i\sim N(0,\sigma^2) $$
+
+Model including age: $$ ReacTim_i=\alpha+\beta_{urimerc}\cdot UriMerc_i+\beta_{group}\cdot Group_i+\beta_{age}\cdot Age_i+\epsilon_i, \epsilon_i\sim N(0,\sigma^2) $$
+
+Full model (age and interaction term): $$ ReacTim_i=\alpha+\beta_{urimerc}\cdot UriMerc_i+\beta_{group}\cdot Group_i+\beta_{age}\cdot Age_i+\beta_{urimerc,group}\cdot UriMerc_i\cdot Group_i+\epsilon_i, \epsilon_i\sim N(0,\sigma^2) $$
+
+```{r}
+#| echo: false
+#| label: tbl-MC
+#| results: asis
+#| tbl-cap: Model Comparison based on AIC and R-square ad
+#| tbl-placement: "H"
+model_basic <- linear_reg() |>
+  fit(data=df,ReacTim~UriMerc) |>
+  extract_fit_engine() |>
+  glance()
+model_Group <- linear_reg() |>
+  fit(data=df,ReacTim~UriMerc+Group) |>
+  extract_fit_engine() |>
+  glance()
+model_inter <- linear_reg() |>
+  fit(data=df,ReacTim~UriMerc*Group) |>
+  extract_fit_engine() |>
+  glance()
+model_age <- linear_reg() |>
+  fit(data=df,ReacTim~UriMerc+Group+Age) |>
+  extract_fit_engine() |>
+  glance()
+model_full <- linear_reg() |>
+  fit(data=df,ReacTim~UriMerc*Group+Age) |>
+  extract_fit_engine() |>
+  glance()
+
+Models <- c("Basic model","Model with Group","Model with interaction term","Model including age","Full model")
+df_test <- bind_rows(model_basic, model_Group, model_inter, model_age, model_full, .id = "Model") |>
+  as.data.frame() |>  
+  mutate(Model = as.character(Model))  
+
+colnames(df_test) <- trimws(colnames(df_test)) 
+
+df_test_selected <- df_test |> dplyr::select(Model, adj.r.squared, AIC, BIC) |>
+  mutate(Model=Models[as.integer(Model)])
+
+library(kableExtra)
+
+df_test_selected |> 
+  kable(
+    digits = 3,
+    format = "latex",          
+    booktabs = TRUE            
+  ) |> 
+  kable_styling(
+    latex_options = c("striped", "hold_position"), 
+    full_width = FALSE, 
+    position = "center"
+  ) |> 
+  column_spec(1, bold = TRUE) |>  
+  column_spec(2:4, width = "5em")
+
+
+```
+
+As the @tbl-MC shows that the model with the highest $R^2$ adj and lowest AIC is the model including age, hence we do find that including age improves the model.
+
+```{r}
+model_Age <- lm(ReacTim~UriMerc+Group+Age,data=df)
+```
+
+```{r}
+#| echo: false
+#| label: tbl-model-age
+#| results: asis
+#| tbl-cap: Coefficients of model including age
+#| tbl-placement: "H"
+summary_age <- tidy(model_Age)
+knitr::kable(summary_age, format = "latex", booktabs = TRUE)
+```
+
+As @tbl-model-age shows:
+
+The intercept is 699.609ms, suggesting the estimated baseline reaction time when all predictors are at zero. Since an age of zero is not realistic in this context, the intercept mainly serves as a reference point.
+
+Age has a significant positive effect on reaction time(p=0.00025) with a statistical significance to a 1% level, meaning each additional year is associated with an increase in reaction time by approximately 5.068 ms, holding other variables constant.
+
+Dentists are associated with a decrease in reaction time of 72.689 milliseconds on average compared to the control group, holding other variables constant. Group has a significant effect (p\<0.05) to a 5% significance level, indicating a difference in reaction times between groups.
+
+UriMerc does not have a statistically significant effect(p=0.1643) to a 5% significance level, suggesting its effect on reaction time is uncertain based on this model.
+
+The model explains 10.88% of the variance in reaction time, which is relatively low, suggesting additional confounding factors influence reaction time.
+
+In the fitted vs residual plot (@fig-age) we find that residuals appear randomly scattered around the blue reference line implying that variance is constant. The normal Q-Q plot we found most of the points follow the line, towards the tail end however we find deviations with some points being outliers, this implies the data is a little bit right skewed, despite this, it's reasonable to assume normality in the errors.
+
+```{r}
+#| echo: false
+#| label: fig-age
+#| fig-cap: Plot of residual vs fitted and normal Q-Q plot for the model including age
+#| fig-pos: "H"
+#| fig.width: 7
+#| fig.height: 3
+model_age2 <- linear_reg() |>
+  fit(data=df,ReacTim~UriMerc+Group+Age) |>
+  extract_fit_engine()
+regression.points3 <- get_regression_points(model_age2)
+p_residual <- ggplot(regression.points,aes(x=ReacTim_hat,y=residual))+
+  geom_point()+
+  labs(x="Fitted values",y="Residual")+
+  geom_hline(yintercept = 0,col="blue",linewidth=1)+
+  facet_wrap(~Group)
+qq_plot2 <- ggplot(regression.points3,aes(sample=residual))+
+  stat_qq()+
+  stat_qq_line(color="red")+
+  facet_wrap(~Group)+
+  labs(title = "Q-Q Plot",x = "Theoretical Quantiles", y = "Residuals")
+p_residual+qq_plot2+plot_layout(ncol = 2)
+```
+
+# Discussions and Conclusions
+
+## Summary of Findings
+
+We can conclude that dentists have significantly different urine mercury levels compared to the control group.
+
+On average, dentists have higher reaction time compared to staff and postgraduate students at Glasgow University. This result suggests exposure to mercury could be impacting dentists cognitive ability.
+
+Results suggest that higher mercury concentrations could have a slight impact on reaction times, making them slower. This has weak correlation so results could be due to other variables.
+
+Results also show age has little to no impact on reacton time, this could be due to the range of age data is not large enough to find trend.
+
+There is some correlation between old age and lower mercury concentration, this could be due to several reasons such as low exposure and biological changes.
+
+## Limitations
+
+While this study gives a great insight into the effect of mercury on dentists, it also has many limitations.
+
+The first limitation of this study is the small sample size. The results are not generalizable to a large population as it only investigates Scottish dentists and staff and students from Glasgow University. This could be counteracted by using a random sample of dentists in the UK or worldwide, and the control group being a random selection of non-dentists.
+
+Another limitation is the amount of confounding variables such as age, sex, education, and medical conditions. All of these factors could affect reaction time and mercury exposure. Even though all participants have been or are going to university there could be a real difference in intellectual ability and therefore reaction time. Even other medical conditions could affect mercury concentration and reaction time in participants. Certain diets and food, such as tuna fish, also contribute to the levels of mercury in urine and this could affect findings. All of these variables would need to be controlled or kept constant to keep the validity of the study.
